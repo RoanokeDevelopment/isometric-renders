@@ -1,5 +1,10 @@
 package com.glisco.isometricrenders.command;
 
+import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
+import com.cobblemon.mod.common.api.pokemon.PokemonSpecies;
+import com.cobblemon.mod.common.command.argument.PokemonPropertiesArgumentType;
+import com.cobblemon.mod.common.pokemon.Pokemon;
+import com.cobblemon.mod.common.pokemon.RenderablePokemon;
 import com.glisco.isometricrenders.IsometricRenders;
 import com.glisco.isometricrenders.mixin.access.BlockStateArgumentAccessor;
 import com.glisco.isometricrenders.mixin.access.DefaultPosArgumentAccessor;
@@ -31,6 +36,7 @@ import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
@@ -40,6 +46,7 @@ import net.minecraft.util.math.Vec3d;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
@@ -70,6 +77,9 @@ public class IsorenderCommand {
                                 .executes(IsorenderCommand::renderEntityWithoutNbt)
                                 .then(argument("nbt", NbtCompoundArgumentType.nbtCompound())
                                         .executes(IsorenderCommand::renderEntityWithNbt))))
+                .then(literal("pokemon")
+                        .then(argument("properties", PokemonPropertiesArgumentType.Companion.properties())
+                                .executes(IsorenderCommand::renderPokemon)))
                 .then(literal("player")
                         .executes(IsorenderCommand::renderSelf)
                         .then(argument("player", StringArgumentType.string())
@@ -247,6 +257,19 @@ public class IsorenderCommand {
 
         ScreenScheduler.schedule(new RenderScreen(
                 EntityRenderable.of(entityReference.value(), entityNbt)
+        ));
+
+        return 0;
+    }
+
+    private static int renderPokemon(CommandContext<FabricClientCommandSource> context) {
+        final var client = MinecraftClient.getInstance();
+        final var properties = PokemonPropertiesArgumentType.Companion.getPokemonProperties(context, "properties");
+        final var pokemon = properties.createEntity(client.world);
+        pokemon.refreshPositionAndAngles(client.player.getX(), client.player.getY(), client.player.getZ(), pokemon.getYaw(), pokemon.getPitch());
+
+        ScreenScheduler.schedule(new RenderScreen(
+                new EntityRenderable(pokemon)
         ));
 
         return 0;

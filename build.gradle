@@ -10,6 +10,7 @@ group = project.maven_group
 
 repositories {
     maven { url "https://maven.wispforest.io" }
+    maven { url "https://maven.impactdev.net/repository/development/" }
 }
 
 loom {
@@ -24,6 +25,7 @@ dependencies {
 
     // Fabric API. This is technically optional, but you probably want it anyway.
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    modImplementation "com.cobblemon:fabric:1.4.0+1.20.1-SNAPSHOT"
 
     modImplementation "io.wispforest:worldmesher:${project.worldmesher_version}"
     include "io.wispforest:worldmesher:${project.worldmesher_version}"
