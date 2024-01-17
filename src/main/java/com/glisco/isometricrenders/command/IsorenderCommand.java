@@ -268,8 +268,10 @@ public class IsorenderCommand {
         final var pokemon = properties.createEntity(client.world);
         pokemon.refreshPositionAndAngles(client.player.getX(), client.player.getY(), client.player.getZ(), pokemon.getYaw(), pokemon.getPitch());
 
+        //pokemon.getForm().getHitbox()
+
         ScreenScheduler.schedule(new RenderScreen(
-                new EntityRenderable(pokemon)
+                new PokemonRenderable(pokemon)
         ));
 
         return 0;
