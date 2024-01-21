@@ -1,13 +1,20 @@
 package com.glisco.isometricrenders.render;
 
+import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import com.glisco.isometricrenders.property.DefaultPropertyBundle;
+import com.glisco.isometricrenders.util.ExportPathSpec;
 import net.minecraft.entity.Entity;
+import net.minecraft.registry.Registries;
 
 public class PokemonRenderable extends EntityRenderable implements TickingRenderable<DefaultPropertyBundle> {
-    public PokemonRenderable(Entity entity) {
-        super(entity);
-    }
 
+    private final PokemonEntity pokemonEntity;
+
+    public PokemonRenderable(PokemonEntity entity) {
+        super(entity);
+        this.pokemonEntity = entity;
+    }
+/*
     @Override
     public void prepare() {
         // do nothing
@@ -16,6 +23,11 @@ public class PokemonRenderable extends EntityRenderable implements TickingRender
     @Override
     public void cleanUp() {
         // do nothing
+    }
+*/
+    @Override
+    public ExportPathSpec exportPath() {
+        return ExportPathSpec.of("cobblemon", String.valueOf(this.pokemonEntity.getPokemon().getSpecies().getNationalPokedexNumber()));
     }
 
 }

@@ -1,10 +1,12 @@
 package com.glisco.isometricrenders.command;
 
+import com.cobblemon.mod.common.Cobblemon;
 import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
 import com.cobblemon.mod.common.api.pokemon.PokemonSpecies;
 import com.cobblemon.mod.common.command.argument.PokemonPropertiesArgumentType;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.cobblemon.mod.common.pokemon.RenderablePokemon;
+import com.cobblemon.mod.common.pokemon.Species;
 import com.glisco.isometricrenders.IsometricRenders;
 import com.glisco.isometricrenders.mixin.access.BlockStateArgumentAccessor;
 import com.glisco.isometricrenders.mixin.access.DefaultPosArgumentAccessor;
@@ -80,6 +82,8 @@ public class IsorenderCommand {
                 .then(literal("pokemon")
                         .then(argument("properties", PokemonPropertiesArgumentType.Companion.properties())
                                 .executes(IsorenderCommand::renderPokemon)))
+                .then(literal("batch_pokemon")
+                        .executes(IsorenderCommand::batchRenderPokemon))
                 .then(literal("player")
                         .executes(IsorenderCommand::renderSelf)
                         .then(argument("player", StringArgumentType.string())
@@ -272,6 +276,22 @@ public class IsorenderCommand {
 
         ScreenScheduler.schedule(new RenderScreen(
                 new PokemonRenderable(pokemon)
+        ));
+
+        return 0;
+    }
+
+    private static int batchRenderPokemon(CommandContext<FabricClientCommandSource> context) {
+        final List<PokemonProperties> propertyList = new ArrayList<>();
+
+        for (Species species: PokemonSpecies.INSTANCE.getImplemented()) {
+            propertyList.add(
+                    PokemonProperties.Companion.parse(species.getName(), " ", "=")
+            );
+        }
+
+        ScreenScheduler.schedule(new RenderScreen(
+                new PokemonBatchRenderable<PokemonRenderable>("cobblemon", propertyList)
         ));
 
         return 0;
