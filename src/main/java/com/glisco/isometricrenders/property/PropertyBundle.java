@@ -6,6 +6,8 @@ import net.minecraft.client.util.math.MatrixStack;
 
 public interface PropertyBundle {
 
+    boolean shouldRebuildGui();
+
     void buildGuiControls(Renderable<?> renderable, FlowLayout container);
 
     void applyToViewMatrix(MatrixStack modelViewStack);

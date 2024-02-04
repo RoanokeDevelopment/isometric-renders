@@ -11,6 +11,11 @@ public class EmptyRenderable implements Renderable<PropertyBundle> {
 
     private static final PropertyBundle EMPTY_BUNDLE = new PropertyBundle() {
         @Override
+        public boolean shouldRebuildGui() {
+            return false;
+        }
+
+        @Override
         public void buildGuiControls(Renderable<?> renderable, FlowLayout container) {}
 
         @Override

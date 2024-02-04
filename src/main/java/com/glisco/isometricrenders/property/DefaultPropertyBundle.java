@@ -36,6 +36,11 @@ public class DefaultPropertyBundle implements PropertyBundle {
     }
 
     @Override
+    public boolean shouldRebuildGui() {
+        return false;
+    }
+
+    @Override
     public void buildGuiControls(Renderable<?> renderable, FlowLayout container) {
         IsometricUI.sectionHeader(container, "transform_options", false);
 

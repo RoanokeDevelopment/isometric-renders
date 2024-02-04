@@ -306,7 +306,7 @@ public class RenderScreen extends BaseOwoScreen<FlowLayout> {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
 
-        if (this.guiRebuildScheduled) {
+        if (this.guiRebuildScheduled || this.renderable.properties().shouldRebuildGui()) {
             this.guiRebuildScheduled = false;
 
             this.uiAdapter = null;

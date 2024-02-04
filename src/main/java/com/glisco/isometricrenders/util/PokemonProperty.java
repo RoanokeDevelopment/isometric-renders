@@ -3,9 +3,17 @@ package com.glisco.isometricrenders.util;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.glisco.isometricrenders.IsometricRenders;
 import com.glisco.isometricrenders.property.DefaultPropertyBundle;
+import com.glisco.isometricrenders.render.Renderable;
+import com.glisco.isometricrenders.screen.IsometricUI;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import io.wispforest.owo.ui.component.ButtonComponent;
+import io.wispforest.owo.ui.component.Components;
+import io.wispforest.owo.ui.container.FlowLayout;
+import io.wispforest.owo.ui.core.Insets;
+import io.wispforest.owo.ui.core.Sizing;
+import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.File;
 import java.io.FileReader;
@@ -24,16 +32,52 @@ public class PokemonProperty extends DefaultPropertyBundle {
         this.species = species;
     }
 
+    @Override
+    public void buildGuiControls(Renderable<?> renderable, FlowLayout container) {
+        IsometricUI.sectionHeader(container, "transform_options", false);
+
+        IsometricUI.intControl(container, this.scale, "scale", 10);
+        IsometricUI.intControl(container, this.rotation, "rotation", 45);
+        IsometricUI.intControl(container, this.slant, "slant", 30);
+        IsometricUI.intControl(container, this.lightAngle, "light_angle", 15);
+        IsometricUI.intControl(container, this.rotationSpeed, "rotation_speed", 5);
+
+        // -------
+
+        IsometricUI.sectionHeader(container, "presets", true);
+
+        try (var builder = IsometricUI.row(container)) {
+            builder.row.child(Components.button(Translate.gui("dimetric"), (ButtonComponent button) -> {
+                this.rotation.setToDefault();
+                this.slant.set(30);
+            }).horizontalSizing(Sizing.fixed(60)).margins(Insets.right(5)));
+
+            builder.row.child(Components.button(Translate.gui("isometric"), (ButtonComponent button) -> {
+                this.rotation.setToDefault();
+                this.slant.set(36);
+            }).horizontalSizing(Sizing.fixed(60)));
+        }
+    }
+
     public File getSaveFile() {
-        File
-        File save = PokemonPropertyManager.propertyDir.resolve(species + ".json").toFile();
+        // Resolve the path to the directory where the file should be.
+        File dir = FabricLoader.getInstance().getConfigDir().resolve("cobblemon-properties").toFile();
+
+        // Ensure the directory exists.
+        dir.mkdirs();
+
+        // Now resolve the path to the file within that directory.
+        File save = new File(dir, species + ".json");
+
+        // Attempt to create the file if it doesn't exist.
         try {
             save.createNewFile();
         } catch (Exception e) {
-            IsometricRenders.LOGGER.error("Failed to create save file for Pokemon Properties");
+            IsometricRenders.LOGGER.error("Failed to create save file for Pokemon Properties", e);
         }
         return save;
     }
+
 
     public void save() {
         Map<String, Object> propertiesMap = new HashMap<>();

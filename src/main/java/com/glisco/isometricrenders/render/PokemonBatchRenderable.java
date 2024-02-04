@@ -1,6 +1,7 @@
 package com.glisco.isometricrenders.render;
 
 import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
+import com.glisco.isometricrenders.IsometricRenders;
 import com.glisco.isometricrenders.property.DefaultPropertyBundle;
 import com.glisco.isometricrenders.property.GlobalProperties;
 import com.glisco.isometricrenders.property.PropertyBundle;
@@ -22,12 +23,11 @@ import org.joml.Matrix4f;
 
 import java.util.List;
 
-public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderable<PokemonBatchRenderable.PokemonBatchPropertyBundle> {
+public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderable<PokemonProperty> {
 
-    private final PokemonBatchPropertyBundle properties;
+    private PokemonBatchPropertyBundle properties;
     private final List<PokemonProperties> pokemonList;
     private final String contentType;
-    public boolean renderingShadows = true;
 
     private PokemonRenderable currentDelegate;
     private int currentIndex;
@@ -101,6 +101,8 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
             final var pokemon = properties.createEntity(client.world);
             pokemon.refreshPositionAndAngles(client.player.getX(), client.player.getY(), client.player.getZ(), pokemon.getYaw(), pokemon.getPitch());
             this.currentDelegate = new PokemonRenderable(pokemon);
+            this.properties = new PokemonBatchPropertyBundle(this.currentDelegate.pokemonEntity.getPokemon().getSpecies().getName());
+            this.properties.rebuildGui();
         }
     }
 
@@ -116,14 +118,30 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
 
     public static class PokemonBatchPropertyBundle extends PokemonProperty {
 
+        public boolean shouldRebuildGui = false;
+
         public PokemonBatchPropertyBundle(String species) {
             super(species);
+            IsometricRenders.LOGGER.info("Creating Pokemon Batch Propety with Species: "  + species);
+        }
+
+        public void rebuildGui() {
+            shouldRebuildGui = true;
+        }
+
+        @Override
+        public boolean shouldRebuildGui() {
+            if (shouldRebuildGui) {
+                shouldRebuildGui = false;
+                return true;
+            }
+            return false;
         }
 
         @Override
         public void buildGuiControls(Renderable<?> renderable, FlowLayout container) {
             final PokemonBatchRenderable<?> batchRenderable = (PokemonBatchRenderable<?>) renderable;
-
+            IsometricRenders.LOGGER.info("Creating gui controls for: " + batchRenderable.currentDelegate.pokemonEntity.getPokemon().getSpecies().getName() + " <- delegate, " + batchRenderable.properties.species + " <- properties species, " + this.species + " <- this.species");
             super.buildGuiControls(batchRenderable.currentDelegate, container);
 
             IsometricUI.sectionHeader(container, "batch.controls", true);
@@ -140,6 +158,10 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
                 builder.row.child(Components.button(Text.literal("Next"), (ButtonComponent button) -> {
                     batchRenderable.getNextDelegate();
                 }));
+                builder.row.child(Components.button(Text.literal("Save"), (ButtonComponent button) -> {
+                    IsometricRenders.LOGGER.info("Trying to save pokemon properties... for species: " + batchRenderable.properties.species + " in delegate: " + ((PokemonBatchRenderable) renderable).currentDelegate.pokemonEntity.getPokemon().getSpecies().getName());
+                    batchRenderable.properties.save();
+                }));
             }
 
             IsometricUI.dynamicLabel(container, () -> Translate.gui(
@@ -148,11 +170,5 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
                     batchRenderable.pokemonList.size()
             ));
         }
-
-        @Override
-        public void applyToViewMatrix(MatrixStack modelViewStack) {
-            super.applyToViewMatrix(modelViewStack);
-        }
-
     }
 }
