@@ -7,6 +7,7 @@ import com.glisco.isometricrenders.property.PropertyBundle;
 import com.glisco.isometricrenders.screen.IsometricUI;
 import com.glisco.isometricrenders.util.ExportPathSpec;
 import com.glisco.isometricrenders.util.ImageIO;
+import com.glisco.isometricrenders.util.PokemonProperty;
 import com.glisco.isometricrenders.util.Translate;
 import io.wispforest.owo.ui.component.ButtonComponent;
 import io.wispforest.owo.ui.component.Components;
@@ -43,7 +44,7 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
         this.contentType = ExportPathSpec.exportRoot().resolve("batches/")
                 .relativize(ImageIO.next(ExportPathSpec.exportRoot().resolve("batches/" + source + "/"))).toString();
 
-        this.properties = new PokemonBatchPropertyBundle(this.currentDelegate.properties());
+        this.properties = new PokemonBatchPropertyBundle(this.currentDelegate.pokemonEntity.getPokemon().getSpecies().getName());
         this.renderDelay = Math.max((int) Math.pow(GlobalProperties.exportResolution / 1024f, 2) * 100L, 75);
     }
 
@@ -113,38 +114,17 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
         return this.currentDelegate.exportPath().relocate("batches/" + this.contentType);
     }
 
-    public static class PokemonBatchPropertyBundle extends DefaultPropertyBundle {
+    public static class PokemonBatchPropertyBundle extends PokemonProperty {
 
-        private final PropertyBundle delegate;
-
-        public PokemonBatchPropertyBundle(PropertyBundle delegate) {
-            this.delegate = delegate;
-
-            // A bit ugly, but we copy all property values from the delegate and hook
-            // the delegate onto our properties - this makes sure we don't always reset
-            // the properties and that the mouse and keyboard controls actually affect the delegate
-            if (this.delegate instanceof DefaultPropertyBundle defaultPropertyBundle) {
-                this.scale.copyFrom(defaultPropertyBundle.scale);
-                this.rotation.copyFrom(defaultPropertyBundle.rotation);
-                this.slant.copyFrom(defaultPropertyBundle.slant);
-                this.lightAngle.copyFrom(defaultPropertyBundle.lightAngle);
-                this.xOffset.copyFrom(defaultPropertyBundle.xOffset);
-                this.yOffset.copyFrom(defaultPropertyBundle.yOffset);
-
-                this.scale.listen(defaultPropertyBundle.scale);
-                this.rotation.listen(defaultPropertyBundle.rotation);
-                this.slant.listen(defaultPropertyBundle.slant);
-                this.lightAngle.listen(defaultPropertyBundle.lightAngle);
-                this.xOffset.listen(defaultPropertyBundle.xOffset);
-                this.yOffset.listen(defaultPropertyBundle.yOffset);
-            }
+        public PokemonBatchPropertyBundle(String species) {
+            super(species);
         }
 
         @Override
         public void buildGuiControls(Renderable<?> renderable, FlowLayout container) {
             final PokemonBatchRenderable<?> batchRenderable = (PokemonBatchRenderable<?>) renderable;
 
-            this.delegate.buildGuiControls(batchRenderable.currentDelegate, container);
+            super.buildGuiControls(batchRenderable.currentDelegate, container);
 
             IsometricUI.sectionHeader(container, "batch.controls", true);
             try (var builder = IsometricUI.row(container)) {
@@ -171,7 +151,7 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
 
         @Override
         public void applyToViewMatrix(MatrixStack modelViewStack) {
-            this.delegate.applyToViewMatrix(modelViewStack);
+            super.applyToViewMatrix(modelViewStack);
         }
 
     }

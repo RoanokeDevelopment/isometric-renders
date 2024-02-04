@@ -8,7 +8,7 @@ import net.minecraft.registry.Registries;
 
 public class PokemonRenderable extends EntityRenderable implements TickingRenderable<DefaultPropertyBundle> {
 
-    private final PokemonEntity pokemonEntity;
+    public final PokemonEntity pokemonEntity;
 
     public PokemonRenderable(PokemonEntity entity) {
         super(entity);
