@@ -139,16 +139,11 @@ public class EntityRenderable extends DefaultRenderable<DefaultPropertyBundle> i
         public final IntProperty yaw = IntProperty.of(0, -180, 180).withRollover();
         public final IntProperty pitch = IntProperty.of(0, -90, 90).withRollover();
 
-        private EntityPropertyBundle() {}
+        public EntityPropertyBundle() {}
 
         @Override
         public void buildGuiControls(Renderable<?> renderable, FlowLayout container) {
             super.buildGuiControls(renderable, container);
-
-            IsometricUI.sectionHeader(container, "entity_pose", true);
-
-            IsometricUI.intControl(container, yaw, "entity_pose.yaw", 15);
-            IsometricUI.intControl(container, pitch, "entity_pose.pitch", 5);
         }
     }
 }

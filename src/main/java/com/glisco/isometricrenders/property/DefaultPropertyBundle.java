@@ -49,6 +49,8 @@ public class DefaultPropertyBundle implements PropertyBundle {
         IsometricUI.intControl(container, slant, "slant", 30);
         IsometricUI.intControl(container, lightAngle, "light_angle", 15);
         IsometricUI.intControl(container, rotationSpeed, "rotation_speed", 5);
+        IsometricUI.intControl(container, xOffset, "x_offset", 30);
+        IsometricUI.intControl(container, yOffset, "y_offset", 30);
 
         // -------
 

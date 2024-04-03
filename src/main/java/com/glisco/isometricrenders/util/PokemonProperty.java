@@ -3,6 +3,8 @@ package com.glisco.isometricrenders.util;
 import com.cobblemon.mod.common.pokemon.Pokemon;
 import com.glisco.isometricrenders.IsometricRenders;
 import com.glisco.isometricrenders.property.DefaultPropertyBundle;
+import com.glisco.isometricrenders.property.IntProperty;
+import com.glisco.isometricrenders.render.EntityRenderable;
 import com.glisco.isometricrenders.render.Renderable;
 import com.glisco.isometricrenders.screen.IsometricUI;
 import com.google.gson.Gson;
@@ -23,15 +25,20 @@ import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PokemonProperty extends DefaultPropertyBundle {
+public class PokemonProperty extends EntityRenderable.EntityPropertyBundle {
 
     public String species;
 
     public PokemonProperty(String species) {
         super();
         this.species = species;
+        if (fileExists()) {
+            loadFile(getSaveFile());
+        } else {
+            IsometricRenders.LOGGER.info("New Pokemon rendering time!!!");
+        }
     }
-
+/*
     @Override
     public void buildGuiControls(Renderable<?> renderable, FlowLayout container) {
         IsometricUI.sectionHeader(container, "transform_options", false);
@@ -41,6 +48,11 @@ public class PokemonProperty extends DefaultPropertyBundle {
         IsometricUI.intControl(container, this.slant, "slant", 30);
         IsometricUI.intControl(container, this.lightAngle, "light_angle", 15);
         IsometricUI.intControl(container, this.rotationSpeed, "rotation_speed", 5);
+
+        IsometricUI.sectionHeader(container, "entity_pose", true);
+
+        IsometricUI.intControl(container, this.yaw, "entity_pose.yaw", 15);
+        IsometricUI.intControl(container, this.pitch, "entity_pose.pitch", 5);
 
         // -------
 
@@ -58,7 +70,7 @@ public class PokemonProperty extends DefaultPropertyBundle {
             }).horizontalSizing(Sizing.fixed(60)));
         }
     }
-
+*/
     public File getSaveFile() {
         // Resolve the path to the directory where the file should be.
         File dir = FabricLoader.getInstance().getConfigDir().resolve("cobblemon-properties").toFile();
@@ -76,6 +88,17 @@ public class PokemonProperty extends DefaultPropertyBundle {
             IsometricRenders.LOGGER.error("Failed to create save file for Pokemon Properties", e);
         }
         return save;
+    }
+
+    public boolean fileExists() {
+        File dir = FabricLoader.getInstance().getConfigDir().resolve("cobblemon-properties").toFile();
+
+        // Ensure the directory exists.
+        dir.mkdirs();
+
+        // Now resolve the path to the file within that directory.
+        File save = new File(dir, species + ".json");
+        return save.exists();
     }
 
 
@@ -100,38 +123,35 @@ public class PokemonProperty extends DefaultPropertyBundle {
         }
     }
 
-    public static PokemonProperty fromFile(File file) {
+    public void loadFile(File file) {
         Gson gson = new Gson();
         try (FileReader reader = new FileReader(file)) {
             Type type = new TypeToken<Map<String, Object>>(){}.getType();
             Map<String, Object> propertiesMap = gson.fromJson(reader, type);
 
             String species = (String) propertiesMap.get("species");
-            PokemonProperty pokemonProperty = new PokemonProperty(species);
 
             if (propertiesMap.containsKey("scale")) {
-                pokemonProperty.scale.set(((Number) propertiesMap.get("scale")).intValue());
+                this.scale.set(((Number) propertiesMap.get("scale")).intValue());
             }
             if (propertiesMap.containsKey("rotation")) {
-                pokemonProperty.rotation.set(((Number) propertiesMap.get("rotation")).intValue());
+                this.rotation.set(((Number) propertiesMap.get("rotation")).intValue());
             }
             if (propertiesMap.containsKey("slant")) {
-                pokemonProperty.slant.set(((Number) propertiesMap.get("slant")).intValue());
+                this.slant.set(((Number) propertiesMap.get("slant")).intValue());
             }
             if (propertiesMap.containsKey("lightAngle")) {
-                pokemonProperty.lightAngle.set(((Number) propertiesMap.get("lightAngle")).intValue());
+                this.lightAngle.set(((Number) propertiesMap.get("lightAngle")).intValue());
             }
             if (propertiesMap.containsKey("xOffset")) {
-                pokemonProperty.xOffset.set(((Number) propertiesMap.get("xOffset")).intValue());
+                this.xOffset.set(((Number) propertiesMap.get("xOffset")).intValue());
             }
             if (propertiesMap.containsKey("yOffset")) {
-                pokemonProperty.yOffset.set(((Number) propertiesMap.get("yOffset")).intValue());
+                this.yOffset.set(((Number) propertiesMap.get("yOffset")).intValue());
             }
 
-            return pokemonProperty;
         } catch (IOException e) {
             IsometricRenders.LOGGER.error("Failed to load Pokemon Properties from file", e);
-            return null; // or handle it in another way
         }
     }
 

@@ -63,7 +63,7 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
         if (this.batchActive && this.currentIndex < this.pokemonList.size() && System.currentTimeMillis() - this.lastRenderTime > this.renderDelay && ImageIO.taskCount() <= 5) {
             //final var image = RenderableDispatcher.drawIntoImage(this.currentDelegate, 0, GlobalProperties.exportResolution);
             //ImageIO.save(image, this.exportPath());
-
+            this.properties = new PokemonBatchPropertyBundle(this.currentDelegate.pokemonEntity.getPokemon().getSpecies().getName());
             ImageIO.save(
                     RenderableDispatcher.copyFramebufferIntoImage(RenderableDispatcher.drawIntoTexture(this.currentDelegate, tickDelta, GlobalProperties.exportResolution)),
                     this.currentDelegate.exportPath());
@@ -102,7 +102,9 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
             pokemon.refreshPositionAndAngles(client.player.getX(), client.player.getY(), client.player.getZ(), pokemon.getYaw(), pokemon.getPitch());
             this.currentDelegate = new PokemonRenderable(pokemon);
             this.properties = new PokemonBatchPropertyBundle(this.currentDelegate.pokemonEntity.getPokemon().getSpecies().getName());
-            this.properties.rebuildGui();
+            if (!this.batchActive) {
+                this.properties.rebuildGui();
+            }
         }
     }
 
