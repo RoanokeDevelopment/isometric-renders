@@ -16,13 +16,18 @@ import com.glisco.isometricrenders.screen.RenderScreen;
 import com.glisco.isometricrenders.screen.ScreenScheduler;
 import com.glisco.isometricrenders.util.AreaSelectionHelper;
 import com.glisco.isometricrenders.util.Translate;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.wispforest.owo.ui.component.EntityComponent;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.command.CommandRegistryAccess;
@@ -35,10 +40,12 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Pair;
 import net.minecraft.util.Util;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
@@ -46,10 +53,14 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.io.File;
+import java.io.FileReader;
+import java.lang.reflect.Type;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
+import java.util.stream.Stream;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
@@ -83,7 +94,10 @@ public class IsorenderCommand {
                         .then(argument("properties", PokemonPropertiesArgumentType.Companion.properties())
                                 .executes(IsorenderCommand::renderPokemon)))
                 .then(literal("batch_pokemon")
-                        .executes(IsorenderCommand::batchRenderPokemon))
+                        .executes(IsorenderCommand::batchRenderPokemon)
+                        .then(argument("pokemon_list", StringArgumentType.string())
+                                .suggests(IsorenderCommand::suggestPokemonList)
+                                .executes(IsorenderCommand::batchRenderPokemonList)))
                 .then(literal("player")
                         .executes(IsorenderCommand::renderSelf)
                         .then(argument("player", StringArgumentType.string())
@@ -115,6 +129,23 @@ public class IsorenderCommand {
                                 .executes(IsorenderCommand::enableUnsafe))
                         .then(literal("disable")
                                 .executes(IsorenderCommand::disableUnsafe))));
+    }
+
+    private static CompletableFuture<Suggestions> suggestPokemonList(CommandContext<FabricClientCommandSource> ctx, SuggestionsBuilder builder) {
+        Path schematicsPath = FabricLoader.getInstance().getConfigDir().resolve("skin_render/jobs");
+        IsometricRenders.LOGGER.info("Suggesting files in path: " + schematicsPath.toString());
+
+        File directory = schematicsPath.toFile();
+        Stream<String> fileNamesStream = Stream.empty();
+        if (directory.exists() && directory.isDirectory()) {
+            fileNamesStream = Stream.of(directory.listFiles())
+                    .filter(File::isFile)
+                    .map(File::getName);
+        } else {
+            return CommandSource.suggestMatching(new String[]{"NO_FILES"}, builder);
+        }
+
+        return CommandSource.suggestMatching(fileNamesStream, builder);
     }
 
     private static int showRootNodeHelp(CommandContext<FabricClientCommandSource> context) {
@@ -282,11 +313,11 @@ public class IsorenderCommand {
     }
 
     private static int batchRenderPokemon(CommandContext<FabricClientCommandSource> context) {
-        final List<PokemonProperties> propertyList = new ArrayList<>();
+        final List<Pair<String, PokemonProperties>> propertyList = new ArrayList<>();
 
         for (Species species: PokemonSpecies.INSTANCE.getImplemented()) {
             propertyList.add(
-                    PokemonProperties.Companion.parse(species.getName(), " ", "=")
+                    new Pair<>(species.getNationalPokedexNumber() + "-" + species.getName(), PokemonProperties.Companion.parse(species.getName(), " ", "="))
             );
         }
 
@@ -297,7 +328,43 @@ public class IsorenderCommand {
         return 0;
     }
 
-    @SuppressWarnings("unchecked")
+    private static int batchRenderPokemonList(CommandContext<FabricClientCommandSource> context) {
+        try {
+            // Resolve the path to the JSON file
+            File file = FabricLoader.getInstance().getConfigDir().resolve("skin_render/jobs/" + StringArgumentType.getString(context, "pokemon_list")).toFile();
+
+            // Create a Gson instance
+            Gson gson = new Gson();
+
+            // Define the type of the content in the JSON file
+            Type type = new TypeToken<HashMap<String, List<String>>>() {}.getType();
+
+            // Read the file into a HashMap
+            HashMap<String, List<String>> pokemonCategories = gson.fromJson(new FileReader(file), type);
+            final List<Pair<String, PokemonProperties>> propertyList = new ArrayList<>();
+
+            for (String aspect: pokemonCategories.keySet()) {
+                for (String species: pokemonCategories.get(aspect)) {
+                    propertyList.add(
+                            new Pair<>(aspect + "-" + species, PokemonProperties.Companion.parse(species + " " + aspect, " ", "="))
+                    );
+                }
+            }
+
+            ScreenScheduler.schedule(new RenderScreen(
+                    new PokemonBatchRenderable<PokemonRenderable>("cobblemon", propertyList)
+            ));
+
+
+        } catch (Exception e) {
+            // Handle potential exceptions like file not found or JSON parsing error
+            e.printStackTrace();
+            return 0; // Indicate failure
+        }
+
+        return 1; // Indicate success
+    }
+
     private static int renderEntityWithoutNbt(CommandContext<FabricClientCommandSource> context) {
         final var entityReference = (RegistryEntry.Reference<EntityType<?>>) context.getArgument("entity", RegistryEntry.Reference.class);
 

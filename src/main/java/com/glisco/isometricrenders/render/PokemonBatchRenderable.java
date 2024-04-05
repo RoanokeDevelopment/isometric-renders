@@ -19,6 +19,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
+import net.minecraft.util.Pair;
 import org.joml.Matrix4f;
 
 import java.util.List;
@@ -26,7 +27,7 @@ import java.util.List;
 public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderable<PokemonProperty> {
 
     private PokemonBatchPropertyBundle properties;
-    private final List<PokemonProperties> pokemonList;
+    private final List<Pair<String, PokemonProperties>> pokemonList;
     private final String contentType;
 
     private PokemonRenderable currentDelegate;
@@ -37,7 +38,7 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
 
     private boolean batchActive;
 
-    public PokemonBatchRenderable(String source, List<PokemonProperties> delegates) {
+    public PokemonBatchRenderable(String source, List<Pair<String, PokemonProperties>> delegates) {
         this.pokemonList = delegates;
         this.reset();
 
@@ -48,7 +49,7 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
         this.renderDelay = Math.max((int) Math.pow(GlobalProperties.exportResolution / 1024f, 2) * 100L, 75);
     }
 
-    public static <R extends Renderable<?>> PokemonBatchRenderable<?> of(String source, List<PokemonProperties> delegates) {
+    public static <R extends Renderable<?>> PokemonBatchRenderable<?> of(String source, List<Pair<String, PokemonProperties>> delegates) {
         if (delegates.isEmpty()) {
             return new PokemonBatchRenderable<>(source, List.of());
         } else {
@@ -66,7 +67,7 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
             this.properties = new PokemonBatchPropertyBundle(this.currentDelegate.pokemonEntity.getPokemon().getSpecies().getName());
             ImageIO.save(
                     RenderableDispatcher.copyFramebufferIntoImage(RenderableDispatcher.drawIntoTexture(this.currentDelegate, tickDelta, GlobalProperties.exportResolution)),
-                    this.currentDelegate.exportPath());
+                    ExportPathSpec.of("cobblemon", this.pokemonList.get(currentIndex).getLeft()));
 
 
             this.getNextDelegate();
@@ -97,7 +98,7 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
         this.currentIndex++;
         if (this.currentIndex < this.pokemonList.size()) {
             final var client = MinecraftClient.getInstance();
-            final var properties = this.pokemonList.get(currentIndex);
+            final var properties = this.pokemonList.get(currentIndex).getRight();
             final var pokemon = properties.createEntity(client.world);
             pokemon.refreshPositionAndAngles(client.player.getX(), client.player.getY(), client.player.getZ(), pokemon.getYaw(), pokemon.getPitch());
             this.currentDelegate = new PokemonRenderable(pokemon);
