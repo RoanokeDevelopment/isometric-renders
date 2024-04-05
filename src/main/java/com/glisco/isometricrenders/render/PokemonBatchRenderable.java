@@ -2,14 +2,9 @@ package com.glisco.isometricrenders.render;
 
 import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
 import com.glisco.isometricrenders.IsometricRenders;
-import com.glisco.isometricrenders.property.DefaultPropertyBundle;
 import com.glisco.isometricrenders.property.GlobalProperties;
-import com.glisco.isometricrenders.property.PropertyBundle;
 import com.glisco.isometricrenders.screen.IsometricUI;
-import com.glisco.isometricrenders.util.ExportPathSpec;
-import com.glisco.isometricrenders.util.ImageIO;
-import com.glisco.isometricrenders.util.PokemonProperty;
-import com.glisco.isometricrenders.util.Translate;
+import com.glisco.isometricrenders.util.*;
 import io.wispforest.owo.ui.component.ButtonComponent;
 import io.wispforest.owo.ui.component.Components;
 import io.wispforest.owo.ui.container.FlowLayout;
@@ -27,7 +22,7 @@ import java.util.List;
 public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderable<PokemonProperty> {
 
     private PokemonBatchPropertyBundle properties;
-    private final List<Pair<String, PokemonProperties>> pokemonList;
+    private final List<PokemonRenderJob> jobList;
     private final String contentType;
 
     private PokemonRenderable currentDelegate;
@@ -38,22 +33,22 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
 
     private boolean batchActive;
 
-    public PokemonBatchRenderable(String source, List<Pair<String, PokemonProperties>> delegates) {
-        this.pokemonList = delegates;
+    public PokemonBatchRenderable(List<PokemonRenderJob> jobList) {
+        this.jobList = jobList;
         this.reset();
 
         this.contentType = ExportPathSpec.exportRoot().resolve("batches/")
-                .relativize(ImageIO.next(ExportPathSpec.exportRoot().resolve("batches/" + source + "/"))).toString();
+                .relativize(ImageIO.next(ExportPathSpec.exportRoot().resolve("batches/"))).toString();
 
         this.properties = new PokemonBatchPropertyBundle(this.currentDelegate.pokemonEntity.getPokemon().getSpecies().getName());
         this.renderDelay = Math.max((int) Math.pow(GlobalProperties.exportResolution / 1024f, 2) * 100L, 75);
     }
 
-    public static <R extends Renderable<?>> PokemonBatchRenderable<?> of(String source, List<Pair<String, PokemonProperties>> delegates) {
-        if (delegates.isEmpty()) {
-            return new PokemonBatchRenderable<>(source, List.of());
+    public static <R extends Renderable<?>> PokemonBatchRenderable<?> of(List<PokemonRenderJob> jobList) {
+        if (jobList.isEmpty()) {
+            return new PokemonBatchRenderable<>(List.of());
         } else {
-            return new PokemonBatchRenderable<>(source, delegates);
+            return new PokemonBatchRenderable<>(jobList);
         }
     }
 
@@ -61,13 +56,13 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
     public void emitVertices(MatrixStack matrices, VertexConsumerProvider vertexConsumers, float tickDelta) {
         this.currentDelegate.emitVertices(matrices, vertexConsumers, tickDelta);
 
-        if (this.batchActive && this.currentIndex < this.pokemonList.size() && System.currentTimeMillis() - this.lastRenderTime > this.renderDelay && ImageIO.taskCount() <= 5) {
+        if (this.batchActive && this.currentIndex < this.jobList.size() && System.currentTimeMillis() - this.lastRenderTime > this.renderDelay && ImageIO.taskCount() <= 5) {
             //final var image = RenderableDispatcher.drawIntoImage(this.currentDelegate, 0, GlobalProperties.exportResolution);
             //ImageIO.save(image, this.exportPath());
             this.properties = new PokemonBatchPropertyBundle(this.currentDelegate.pokemonEntity.getPokemon().getSpecies().getName());
             ImageIO.save(
                     RenderableDispatcher.copyFramebufferIntoImage(RenderableDispatcher.drawIntoTexture(this.currentDelegate, tickDelta, GlobalProperties.exportResolution)),
-                    ExportPathSpec.of("cobblemon", this.pokemonList.get(currentIndex).getLeft()));
+                    ExportPathSpec.of("cobblemon", this.jobList.get(currentIndex).filename));
 
 
             this.getNextDelegate();
@@ -96,9 +91,9 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
 
     private void getNextDelegate() {
         this.currentIndex++;
-        if (this.currentIndex < this.pokemonList.size()) {
+        if (this.currentIndex < this.jobList.size()) {
             final var client = MinecraftClient.getInstance();
-            final var properties = this.pokemonList.get(currentIndex).getRight();
+            final var properties = this.jobList.get(currentIndex).getProperties();
             final var pokemon = properties.createEntity(client.world);
             pokemon.refreshPositionAndAngles(client.player.getX(), client.player.getY(), client.player.getZ(), pokemon.getYaw(), pokemon.getPitch());
             this.currentDelegate = new PokemonRenderable(pokemon);
@@ -169,8 +164,8 @@ public class PokemonBatchRenderable<R extends Renderable<?>> implements Renderab
 
             IsometricUI.dynamicLabel(container, () -> Translate.gui(
                     "batch.remaining",
-                    Math.max(0, batchRenderable.pokemonList.size() - batchRenderable.currentIndex - 1),
-                    batchRenderable.pokemonList.size()
+                    Math.max(0, batchRenderable.jobList.size() - batchRenderable.currentIndex - 1),
+                    batchRenderable.jobList.size()
             ));
         }
     }

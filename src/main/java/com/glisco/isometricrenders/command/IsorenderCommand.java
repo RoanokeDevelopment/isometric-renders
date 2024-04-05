@@ -15,6 +15,7 @@ import com.glisco.isometricrenders.render.*;
 import com.glisco.isometricrenders.screen.RenderScreen;
 import com.glisco.isometricrenders.screen.ScreenScheduler;
 import com.glisco.isometricrenders.util.AreaSelectionHelper;
+import com.glisco.isometricrenders.util.PokemonRenderJob;
 import com.glisco.isometricrenders.util.Translate;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -313,16 +314,13 @@ public class IsorenderCommand {
     }
 
     private static int batchRenderPokemon(CommandContext<FabricClientCommandSource> context) {
-        final List<Pair<String, PokemonProperties>> propertyList = new ArrayList<>();
-
-        for (Species species: PokemonSpecies.INSTANCE.getImplemented()) {
-            propertyList.add(
-                    new Pair<>(species.getNationalPokedexNumber() + "-" + species.getName(), PokemonProperties.Companion.parse(species.getName(), " ", "="))
-            );
-        }
 
         ScreenScheduler.schedule(new RenderScreen(
-                new PokemonBatchRenderable<PokemonRenderable>("cobblemon", propertyList)
+                new PokemonBatchRenderable<PokemonRenderable>(
+                        PokemonSpecies.INSTANCE.getImplemented().stream().map(
+                                PokemonRenderJob::fromSpecies
+                        ).toList()
+                )
         ));
 
         return 0;
@@ -332,37 +330,21 @@ public class IsorenderCommand {
         try {
             // Resolve the path to the JSON file
             File file = FabricLoader.getInstance().getConfigDir().resolve("skin_render/jobs/" + StringArgumentType.getString(context, "pokemon_list")).toFile();
-
-            // Create a Gson instance
             Gson gson = new Gson();
 
-            // Define the type of the content in the JSON file
-            Type type = new TypeToken<HashMap<String, List<String>>>() {}.getType();
-
-            // Read the file into a HashMap
-            HashMap<String, List<String>> pokemonCategories = gson.fromJson(new FileReader(file), type);
-            final List<Pair<String, PokemonProperties>> propertyList = new ArrayList<>();
-
-            for (String aspect: pokemonCategories.keySet()) {
-                for (String species: pokemonCategories.get(aspect)) {
-                    propertyList.add(
-                            new Pair<>(aspect + "-" + species, PokemonProperties.Companion.parse(species + " " + aspect, " ", "="))
-                    );
-                }
-            }
+            Type type = new TypeToken<List<PokemonRenderJob>>() {}.getType();
+            List<PokemonRenderJob> pokemonRenderJobs = gson.fromJson(new FileReader(file), type);
 
             ScreenScheduler.schedule(new RenderScreen(
-                    new PokemonBatchRenderable<PokemonRenderable>("cobblemon", propertyList)
+                    new PokemonBatchRenderable<PokemonRenderable>(pokemonRenderJobs)
             ));
 
-
         } catch (Exception e) {
-            // Handle potential exceptions like file not found or JSON parsing error
             e.printStackTrace();
-            return 0; // Indicate failure
+            return 0;
         }
 
-        return 1; // Indicate success
+        return 1;
     }
 
     private static int renderEntityWithoutNbt(CommandContext<FabricClientCommandSource> context) {
